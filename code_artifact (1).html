@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบตารางเวรและกิจกรรมเภสัชกร มินิมอล</title>
+    <!-- Google Fonts: Prompt & Inter for premium typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS for sleek utility styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons for crisp, vector UI elements -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- html2canvas for perfect image exporting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for minimalist clean look */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        /* Smooth grid transitions */
+        .calendar-day-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans flex flex-col selection:bg-indigo-100 selection:text-indigo-900">
+
+    <header class="bg-white border-b border-slate-100 py-4 px-6 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
+                    <i data-lucide="calendar-range" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+                        ระบบตารางปฏิบัติงานและแผนงานเภสัชกร
+                        <span class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2.5 py-0.5 rounded-full" id="header-month-badge">July 2026</span>
+                    </h1>
+                    <p class="text-xs text-slate-500 mt-0.5 flex items-center gap-1 flex-wrap">
+                        <span>ระบบจัดการตารางงานส่วนบุคคล</span>
+                        <span class="px-1 text-slate-300">|</span>
+                        <span class="font-medium text-slate-700">ภญ.ตรียาพร ไชยกาล</span>
+                        <span class="px-1 text-slate-300">|</span>
+                        <span class="font-medium text-indigo-600 hover:underline cursor-pointer flex items-center gap-1" onclick="openGuide()">
+                            <i data-lucide="help-circle" class="w-3.5 h-3.5 inline"></i> คู่มือการใช้งาน
+                        </span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Month/Year Fast Switcher and Quick Actions -->
+            <div class="flex items-center gap-2 flex-wrap justify-end w-full lg:w-auto">
+                <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/50">
+                    <button onclick="changeMonth(-1)" class="p-1.5 hover:bg-white rounded-lg transition" title="เดือนก่อนหน้า">
+                        <i data-lucide="chevron-left" class="w-4 h-4 text-slate-600"></i>
+                    </button>
+                    <select id="select-month" onchange="onMonthYearChange()" class="bg-transparent text-xs font-semibold px-2 py-1 outline-none cursor-pointer text-slate-700">
+                        <!-- Options filled by JS -->
+                    </select>
+                    <select id="select-year" onchange="onMonthYearChange()" class="bg-transparent text-xs font-semibold px-2 py-1 outline-none cursor-pointer text-slate-700">
+                        <!-- Options filled by JS -->
+                    </select>
+                    <button onclick="changeMonth(1)" class="p-1.5 hover:bg-white rounded-lg transition" title="เดือนถัดไป">
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600"></i>
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="resetToDefault()" class="flex items-center gap-1 px-3 py-2 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-xl transition">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                        ค่าเริ่มต้น (ก.ค. 69)
+                    </button>
+                    <button onclick="exportToImage()" class="flex items-center gap-1 px-3 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 rounded-xl transition">
+                        <i data-lucide="image" class="w-3.5 h-3.5"></i>
+                        ส่งออกภาพ
+                    </button>
+                    <button onclick="exportToGCal()" class="flex items-center gap-1 px-3 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl shadow-sm transition">
+                        <i data-lucide="calendar-plus" class="w-3.5 h-3.5"></i>
+                        เข้า Google Calendar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl mx-auto w-full p-4 md:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Column: Settings, Active Day, and Long Term Event Creator (lg:col-span-4) -->
+        <div class="lg:col-span-4 flex flex-col gap-6">
+            
+            <!-- Person Card (Cleaned without "Pharmacist 5" reference) -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+                <!-- ส่วนแสดงรูปภาพโปรไฟล์ (คุณสามารถเปลี่ยนชื่อไฟล์รูปภาพของคุณตรงนี้ได้เลย) -->
+                <div class="w-14 h-14 rounded-2xl overflow-hidden shadow-md shadow-indigo-100 flex items-center justify-center bg-gradient-to-tr from-indigo-500 to-purple-600 relative border border-slate-100">
+                    <!-- หากต้องการเปลี่ยนรูปภาพ ให้แก้ไขชื่อไฟล์ที่ src="profile.jpg" เป็นชื่อรูปของคุณ (เช่น profile.png หรือ ลิงก์รูปภาพออนไลน์) -->
+                    <img id="profile-avatar" src="profile.jpg" alt="ภญ.ตรียาพร" class="w-full h-full object-cover" onerror="this.style.opacity='0'; document.getElementById('profile-avatar-fallback').style.opacity='1';">
+                    
+                    <!-- ส่วนแสดงไอคอนสำรอง (จะแสดงผลอัตโนมัติถ้ารูปภาพหลักโหลดไม่ได้) -->
+                    <div id="profile-avatar-fallback" class="absolute inset-0 flex items-center justify-center text-white opacity-0 transition-opacity duration-200 pointer-events-none">
+                        <i data-lucide="user" class="w-6 h-6"></i>
+                    </div>
+                </div>
+                <div class="flex-grow">
+                    <span class="text-[10px] uppercase tracking-wider font-semibold text-indigo-600">กลุ่มงานเภสัชกรรม</span>
+                    <h2 class="text-base font-bold text-slate-900">ภญ.ตรียาพร ไชยกาล</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">เภสัชกรปฏิบัติการ • โรงพยาบาลวัฒนานคร</p>
+                </div>
+            </div>
+
+            <!-- Customize Colors Section -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <i data-lucide="palette" class="w-4 h-4"></i>
+                        โทนสีเวรประจำเดือน
+                    </h3>
+                    <span class="text-[10px] text-slate-400">คลิกสีเพื่อปรับแต่ง</span>
+                </div>
+                
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="applyPreset('pastel')" class="p-1.5 text-[10px] font-medium border border-slate-200 rounded-lg bg-slate-50 hover:bg-slate-100 transition">พาสเทล</button>
+                    <button onclick="applyPreset('neon')" class="p-1.5 text-[10px] font-medium border border-slate-200 rounded-lg bg-slate-50 hover:bg-slate-100 transition">สดใส</button>
+                    <button onclick="applyPreset('minimal')" class="p-1.5 text-[10px] font-medium border border-slate-200 rounded-lg bg-slate-50 hover:bg-slate-100 transition">มินิมอล</button>
+                    <button onclick="applyPreset('hospital')" class="p-1.5 text-[10px] font-medium border border-slate-200 rounded-lg bg-slate-50 hover:bg-slate-100 transition">การแพทย์</button>
+                </div>
+
+                <div class="space-y-3 mt-1">
+                    <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl hover:bg-slate-100/70 transition">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" id="preview-shift-night-badge">ด</span>
+                            <span class="text-xs font-medium text-slate-700">เวรดึก (ด)</span>
+                        </div>
+                        <input type="color" id="color-night" onchange="updateShiftColor('night', this.value)" class="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent">
+                    </div>
+                    <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl hover:bg-slate-100/70 transition">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" id="preview-shift-morning-badge">ช</span>
+                            <span class="text-xs font-medium text-slate-700">เวรเช้า (ช)</span>
+                        </div>
+                        <input type="color" id="color-morning" onchange="updateShiftColor('morning', this.value)" class="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent">
+                    </div>
+                    <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl hover:bg-slate-100/70 transition">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" id="preview-shift-afternoon-badge">บ</span>
+                            <span class="text-xs font-medium text-slate-700">เวรบ่าย (บ)</span>
+                        </div>
+                        <input type="color" id="color-afternoon" onchange="updateShiftColor('afternoon', this.value)" class="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Day Editor Box -->
+            <div id="day-editor-card" class="bg-white p-5 rounded-2xl border-2 border-indigo-500 shadow-lg shadow-indigo-50/50 flex flex-col gap-4 transition-all duration-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                        <i data-lucide="edit-3" class="w-4 h-4 text-indigo-600"></i>
+                        แก้ไขข้อมูลวันที่ <span id="editor-day-num" class="text-indigo-600">1</span> <span id="editor-month-label">ก.ค.</span>
+                    </h3>
+                    <span class="text-[10px] bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-full" id="editor-day-type">วันทำงานปกติ</span>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">เวรปฏิบัติงาน (เลือกได้หลายแบบร่วมกัน)</span>
+                    <div class="grid grid-cols-3 gap-2 mt-1">
+                        <button onclick="toggleActiveDayShift('ด')" id="toggle-shift-night" class="py-2.5 px-3 border border-slate-200 hover:border-indigo-200 rounded-xl flex flex-col items-center gap-1 transition">
+                            <span class="text-xs font-semibold">ดึก (ด)</span>
+                            <span class="text-[9px] text-slate-400">24:00 - 08:00</span>
+                        </button>
+                        <button onclick="toggleActiveDayShift('ช')" id="toggle-shift-morning" class="py-2.5 px-3 border border-slate-200 hover:border-indigo-200 rounded-xl flex flex-col items-center gap-1 transition">
+                            <span class="text-xs font-semibold">เช้า (ช)</span>
+                            <span class="text-[9px] text-slate-400">08:00 - 16:00</span>
+                        </button>
+                        <button onclick="toggleActiveDayShift('บ')" id="toggle-shift-afternoon" class="py-2.5 px-3 border border-slate-200 hover:border-indigo-200 rounded-xl flex flex-col items-center gap-1 transition">
+                            <span class="text-xs font-semibold">บ่าย (บ)</span>
+                            <span class="text-[9px] text-slate-400">16:00 - 24:00</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                    <label for="editor-note" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">โน้ตสั้นย่อประจำวัน</label>
+                    <textarea id="editor-note" oninput="updateActiveDayNote(this.value)" rows="1" placeholder="เช่น สลับเวรกับคนอื่น..." class="w-full text-xs p-2 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 rounded-xl outline-none transition resize-none"></textarea>
+                </div>
+            </div>
+
+            <!-- Long-term Events Planner -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-4">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <i data-lucide="calendar-plus" class="w-4 h-4 text-emerald-600"></i>
+                    เพิ่มกิจกรรมพิเศษระยะยาว
+                </h3>
+                
+                <div class="space-y-3">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">ชื่อกิจกรรม / งานสำคัญ</label>
+                        <input type="text" id="long-event-title" placeholder="เช่น ไปสัมมนาวิชาการ, ลาพักร้อน" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:border-emerald-500 transition">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">วันที่เริ่ม</label>
+                            <select id="long-event-start" class="w-full text-xs p-2 border border-slate-200 rounded-xl outline-none focus:border-emerald-500 cursor-pointer"></select>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">วันสิ้นสุด</label>
+                            <select id="long-event-end" class="w-full text-xs p-2 border border-slate-200 rounded-xl outline-none focus:border-emerald-500 cursor-pointer"></select>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase mr-1">สีแถบ:</label>
+                            <div class="flex gap-1.5">
+                                <button onclick="setEventColorChoice('#ec4899')" id="color-c-pink" class="w-5 h-5 rounded-full bg-pink-500 ring-2 ring-offset-2 ring-transparent transition"></button>
+                                <button onclick="setEventColorChoice('#06b6d4')" id="color-c-cyan" class="w-5 h-5 rounded-full bg-cyan-500 ring-2 ring-offset-2 ring-transparent transition"></button>
+                                <button onclick="setEventColorChoice('#10b981')" id="color-c-green" class="w-5 h-5 rounded-full bg-emerald-500 ring-2 ring-offset-2 ring-transparent transition"></button>
+                                <button onclick="setEventColorChoice('#f59e0b')" id="color-c-orange" class="w-5 h-5 rounded-full bg-amber-500 ring-2 ring-offset-2 ring-transparent transition"></button>
+                            </div>
+                        </div>
+                        <button onclick="addLongTermEvent()" class="flex items-center gap-1 px-3 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            บันทึกงาน
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Event List Display -->
+                <div class="border-t border-slate-100 pt-3 flex flex-col gap-2 max-h-[160px] overflow-y-auto" id="long-events-list">
+                    <!-- Event rows will be injected dynamically -->
+                </div>
+            </div>
+
+            <!-- Shift Statistics -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-4">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                    สถิติปฏิบัติงานประจำเดือน
+                </h3>
+                
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="bg-indigo-50/50 p-2.5 rounded-xl border border-indigo-100/50 text-center">
+                        <span class="text-[10px] text-indigo-600 font-semibold block uppercase">ดึก</span>
+                        <span class="text-base font-bold text-indigo-900 mt-0.5 block" id="stat-night-count">0</span>
+                    </div>
+                    <div class="bg-amber-50/50 p-2.5 rounded-xl border border-amber-100/50 text-center">
+                        <span class="text-[10px] text-amber-700 font-semibold block uppercase">เช้า</span>
+                        <span class="text-base font-bold text-amber-900 mt-0.5 block" id="stat-morning-count">0</span>
+                    </div>
+                    <div class="bg-pink-50/50 p-2.5 rounded-xl border border-pink-100/50 text-center">
+                        <span class="text-[10px] text-pink-700 font-semibold block uppercase">บ่าย</span>
+                        <span class="text-base font-bold text-pink-900 mt-0.5 block" id="stat-afternoon-count">0</span>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5 text-xs">
+                    <div class="flex items-center justify-between text-slate-600">
+                        <span>จำนวนเวรทำงานทั้งหมด:</span>
+                        <span class="font-bold text-slate-900" id="stat-total-shifts">0 เวร</span>
+                    </div>
+                    <div class="flex items-center justify-between text-slate-600">
+                        <span>วันหยุดปฏิบัติงานทั้งหมด:</span>
+                        <span class="font-bold text-emerald-600" id="stat-off-days">0 วัน</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Sync & Collaboration Card for 2 users -->
+            <div class="bg-white p-5 rounded-2xl border border-indigo-100/80 shadow-md shadow-indigo-50/20 flex flex-col gap-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                        <i data-lucide="refresh-cw" class="w-4 h-4 text-indigo-500"></i>
+                        การจัดการและสำรองข้อมูล (แชร์ 2 คน)
+                    </h3>
+                </div>
+                <p class="text-[10px] text-slate-400 -mt-2 leading-relaxed">
+                    เนื่องจากข้อมูลเก็บในเบราว์เซอร์ เพื่อให้สถิติย้อนหลังตรงกัน ใช้วิธีดาวน์โหลดไฟล์ไปอัปเดตลงในโฟลเดอร์ของ GitHub หรือส่งต่อให้เพื่อนนำเข้าได้ครับ
+                </p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="exportBackupData()" class="flex items-center justify-center gap-1 py-2 px-2.5 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                        สำรองข้อมูล (.json)
+                    </button>
+                    <button onclick="triggerImportInput()" class="flex items-center justify-center gap-1 py-2 px-2.5 bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-100 transition">
+                        <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                        นำเข้าข้อมูล
+                    </button>
+                </div>
+                <!-- Hidden file input for import -->
+                <input type="file" id="import-file-input" onchange="importBackupData(event)" class="hidden" accept=".json">
+            </div>
+
+        </div>
+
+        <!-- Right Column: Calendar Desktop Board (lg:col-span-8) -->
+        <div class="lg:col-span-8 flex flex-col gap-4">
+            
+            <!-- Calendar Board (Export Target) -->
+            <div id="calendar-export-area" class="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col">
+                
+                <!-- Inner Header for Export Image Purpose -->
+                <div class="flex items-center justify-between border-b border-slate-100 pb-5 mb-5">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full" id="board-month-title">ตารางเวรเดือนกรกฎาคม 2569</span>
+                        </div>
+                        <h2 class="text-2xl font-black text-slate-900 mt-1 tracking-tight">ภญ.ตรียาพร ไชยกาล</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">กลุ่มงานเภสัชกรรม โรงพยาบาลวัฒนานคร | แผนงานและตารางขึ้นเวร</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-2xl font-black text-slate-300 tracking-wider" id="board-english-month">JULY</div>
+                        <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest" id="board-english-year">2026</div>
+                    </div>
+                </div>
+
+                <!-- Calendar Week Header -->
+                <div class="grid grid-cols-7 gap-1 text-center font-bold text-xs text-slate-400 mb-2">
+                    <div class="py-2 text-rose-500">อา</div>
+                    <div class="py-2">จ</div>
+                    <div class="py-2">อ</div>
+                    <div class="py-2">พ</div>
+                    <div class="py-2">พฤ</div>
+                    <div class="py-2">ศ</div>
+                    <div class="py-2 text-amber-600">ส</div>
+                </div>
+
+                <!-- Calendar Content Days -->
+                <div id="calendar-grid" class="grid grid-cols-7 gap-1.5 md:gap-2 flex-grow">
+                    <!-- Javascript inserts empty offset blocks and day blocks here dynamically -->
+                </div>
+
+                <!-- Legend of Shifts (Visible in exported Image) -->
+                <div class="flex flex-wrap items-center justify-between gap-4 mt-6 pt-5 border-t border-slate-100 text-[10px] text-slate-400">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <span class="flex items-center gap-1">
+                            <span class="w-3 h-3 rounded-full inline-block" id="legend-night-color"></span> ดึก (ด)
+                        </span>
+                        <span class="flex items-center gap-1">
+                            <span class="w-3 h-3 rounded-full inline-block" id="legend-morning-color"></span> เช้า (ช)
+                        </span>
+                        <span class="flex items-center gap-1">
+                            <span class="w-3 h-3 rounded-full inline-block" id="legend-afternoon-color"></span> บ่าย (บ)
+                        </span>
+                        <span class="flex items-center gap-1">
+                            <span class="w-3 h-1 rounded-sm inline-block bg-slate-300"></span> แถบสีกิจกรรมระยะยาว
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="flex items-center gap-1">
+                            <span class="w-3 h-3 bg-yellow-100 border border-yellow-200 rounded inline-block"></span> เสาร์-อาทิตย์
+                        </span>
+                        <span class="flex items-center gap-1">
+                            <span class="w-3 h-3 bg-red-50 border border-red-200 rounded inline-block"></span> วันหยุดนักขัตฤกษ์
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Custom Modal Dialogs -->
+    <div id="custom-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border border-slate-100 flex flex-col gap-4 transform scale-95 transition-transform duration-200">
+            <div class="flex items-center gap-3 text-indigo-600">
+                <div class="p-2.5 bg-indigo-50 rounded-2xl" id="modal-icon-container">
+                    <i data-lucide="info" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-base font-bold text-slate-900" id="modal-title">หัวข้อแจ้งเตือน</h3>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed" id="modal-message">รายละเอียดข้อความ...</p>
+            <div class="flex items-center justify-end gap-2 mt-2">
+                <button onclick="closeModal()" class="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-xl hover:bg-indigo-700 transition">ตกลง</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Smart Guide & Help Modal (Replaces previous reference sheet info) -->
+    <div id="guide-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-xl border border-slate-100 flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="help-circle" class="text-indigo-600"></i>
+                    คู่มือการใช้งานระบบจัดการตารางเวรส่วนบุคคล
+                </h3>
+                <button onclick="closeGuide()" class="p-1 hover:bg-slate-100 rounded-lg text-slate-400">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="text-xs text-slate-600 space-y-2">
+                <p>ระบบนี้ออกแบบมาเพื่อจัดการตารางปฏิบัติงานและกิจกรรมของเภสัชกรอย่างมีประสิทธิภาพสูงสุด โดยคุณสามารถประยุกต์ใช้งานได้ดังนี้:</p>
+                <ul class="list-disc list-inside space-y-1.5 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                    <li><strong>การจัดการเวรรายวัน:</strong> คลิกเลือกวันที่ต้องการบนปฏิทิน แล้วเลือกใส่เวร (ด/ช/บ) จากแผงควบคุมด้านซ้าย คุณสามารถใส่เวรเดี่ยวหรือเลือกหลายปุ่มเพื่อควงเวร (เช่น ช+บ) ร่วมกันได้</li>
+                    <li><strong>ใส่บันทึกย่อ (Notes):</strong> พิมพ์บันทึกส่วนตัวประจำวัน เช่น สลับเวรกับใคร หรือรายละเอียดงานย่อย เพื่อแสดงเป็นสัญลักษณ์บนตาราง</li>
+                    <li><strong>กิจกรรมระยะยาว:</strong> ใช้ระบบวางแผนกิจกรรมเพื่อคาดแถบสีระยะยาวผ่านปฏิทิน เช่น ช่วงลาพักร้อน หรือ สัมมนาวิชาการภายนอก</li>
+                    <li><strong>สำรองข้อมูลร่วมกัน:</strong> ใช้ปุ่มสำรองข้อมูล (.json) ในการดาวน์โหลดและส่งข้อมูลให้อีกฝ่ายอัปเดต เพื่อรักษาประวัติการขึ้นเวรและสถิติให้ตรงกันทั้งสองเครื่อง</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Calendar Configuration states
+        let selectedYear = 2026;
+        let selectedMonth = 6; // July (0-indexed, so 6 is July)
+        let activeDayIndex = 1;
+        
+        let scheduleData = {}; // Format: { "2026_6": [{ day: 1, shifts: ['บ'], note: '' }] }
+        let longTermEvents = {}; // Format: { "2026_6": [{ id: 123, title: 'สัมมนา', start: 5, end: 8, color: '#f59e0b' }] }
+        
+        let activeColors = {};
+        let activeEventColorChoice = "#f59e0b"; // Default to orange for long term events
+
+        const THAI_MONTH_NAMES = [
+            "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+            "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+        ];
+
+        const ENG_MONTH_NAMES = [
+            "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
+            "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"
+        ];
+
+        // Known Holidays for 2026
+        const THAI_HOLIDAYS_2026 = {
+            "6_28": "วันเฉลิมพระชนมพรรษารัชกาลที่ 10",
+            "6_29": "วันอาสาฬหบูชา",
+            "6_30": "วันเข้าพรรษา",
+            "7_12": "วันแม่แห่งชาติ (ชดเชย)",
+            "11_5": "วันคล้ายวันพระราชสมภพ ร.9"
+        };
+
+        const COLOR_PRESETS = {
+            pastel: { night: "#E0E7FF text-[#4338CA] border-indigo-200", morning: "#FEF3C7 text-[#D97706] border-amber-200", afternoon: "#FCE7F3 text-[#DB2777] border-rose-200", raw: { night: "#6366f1", morning: "#f59e0b", afternoon: "#ec4899" } },
+            neon: { night: "#D8B4FE text-[#7C3AED] border-purple-200", morning: "#CCFBF1 text-[#0D9488] border-teal-200", afternoon: "#FEE2E2 text-[#DC2626] border-red-200", raw: { night: "#a855f7", morning: "#14b8a6", afternoon: "#ef4444" } },
+            minimal: { night: "#F1F5F9 text-[#334155] border-slate-300", morning: "#F8FAFC text-[#475569] border-slate-200", afternoon: "#E2E8F0 text-[#1E293B] border-slate-400", raw: { night: "#64748b", morning: "#94a3b8", afternoon: "#334155" } },
+            hospital: { night: "#E0F2FE text-[#0369A1] border-sky-200", morning: "#ECFDF5 text-[#047857] border-emerald-200", afternoon: "#F0FDFA text-[#0F766E] border-teal-200", raw: { night: "#0ea5e9", morning: "#10b981", afternoon: "#14b8a6" } }
+        };
+
+        // Static Sample Data representing an initialized schedule state
+        const defaultSampleJuly2026 = [
+            { day: 1, shifts: ['บ'], note: '' },
+            { day: 2, shifts: [], note: '' },
+            { day: 3, shifts: [], note: '' },
+            { day: 4, shifts: ['ช', 'บ'], note: 'เวรคู่ช่วงวันหยุดเสาร์อาทิตย์' },
+            { day: 5, shifts: ['ช', 'บ'], note: 'เวรคู่ช่วงวันหยุดเสาร์อาทิตย์' },
+            { day: 6, shifts: [], note: '' },
+            { day: 7, shifts: ['บ'], note: '' },
+            { day: 8, shifts: ['บ'], note: '' },
+            { day: 9, shifts: [], note: '' },
+            { day: 10, shifts: [], note: '' },
+            { day: 11, shifts: [], note: '' },
+            { day: 12, shifts: [], note: '' },
+            { day: 13, shifts: ['บ'], note: '' },
+            { day: 14, shifts: [], note: '' },
+            { day: 15, shifts: ['บ'], note: '' },
+            { day: 16, shifts: [], note: '' },
+            { day: 17, shifts: [], note: '' },
+            { day: 18, shifts: [], note: '' },
+            { day: 19, shifts: [], note: '' },
+            { day: 20, shifts: [], note: 'สลับเวรปฏิบัติงาน' },
+            { day: 21, shifts: ['บ'], note: '' },
+            { day: 22, shifts: [], note: '' },
+            { day: 23, shifts: ['บ'], note: '' },
+            { day: 24, shifts: [], note: '' },
+            { day: 25, shifts: [], note: '' },
+            { day: 26, shifts: [], note: '' },
+            { day: 27, shifts: ['บ'], note: '' },
+            { day: 28, shifts: [], note: 'วันเฉลิมพระชนมพรรษา ร.10' },
+            { day: 29, shifts: [], note: 'วันอาสาฬหบูชา' },
+            { day: 30, shifts: [], note: 'วันเข้าพรรษา' },
+            { day: 31, shifts: ['บ'], note: '' }
+        ];
+
+        function init() {
+            populateSelectors();
+            loadState();
+            setupEventColors();
+            renderAll();
+        }
+
+        function populateSelectors() {
+            const mSelect = document.getElementById('select-month');
+            const ySelect = document.getElementById('select-year');
+            
+            mSelect.innerHTML = '';
+            ySelect.innerHTML = '';
+
+            THAI_MONTH_NAMES.forEach((m, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.text = m;
+                if(idx === selectedMonth) opt.selected = true;
+                mSelect.appendChild(opt);
+            });
+
+            // Allow years between 2025 and 2030
+            for(let y = 2025; y <= 2030; y++) {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.text = y + 543; // Display as Buddhist Era (พ.ศ.)
+                if(y === selectedYear) opt.selected = true;
+                ySelect.appendChild(opt);
+            }
+        }
+
+        function loadState() {
+            // Load custom colors
+            const savedColors = localStorage.getItem('pharmacist_custom_colors_v2');
+            if (savedColors) {
+                try {
+                    activeColors = JSON.parse(savedColors);
+                } catch (e) {
+                    activeColors = JSON.parse(JSON.stringify(COLOR_PRESETS.pastel));
+                }
+            } else {
+                activeColors = JSON.parse(JSON.stringify(COLOR_PRESETS.pastel));
+            }
+
+            // Safety guard: If raw colors are missing or corrupted
+            if (!activeColors || !activeColors.raw || !activeColors.raw.night) {
+                activeColors = JSON.parse(JSON.stringify(COLOR_PRESETS.pastel));
+            }
+
+            // Sync color input forms
+            document.getElementById('color-night').value = activeColors.raw.night;
+            document.getElementById('color-morning').value = activeColors.raw.morning;
+            document.getElementById('color-afternoon').value = activeColors.raw.afternoon;
+
+            // Load schedule data
+            const savedSchedule = localStorage.getItem('pharmacist_all_schedules');
+            if (savedSchedule) {
+                scheduleData = JSON.parse(savedSchedule);
+            } else {
+                scheduleData = {
+                    "2026_6": JSON.parse(JSON.stringify(defaultSampleJuly2026))
+                };
+            }
+
+            // Load multi-day events
+            const savedEvents = localStorage.getItem('pharmacist_long_term_events');
+            if (savedEvents) {
+                longTermEvents = JSON.parse(savedEvents);
+            } else {
+                longTermEvents = {
+                    "2026_6": [
+                        { id: 1, title: "สัมมนาวิชาการส่วนบุคคล", start: 10, end: 12, color: "#f59e0b" }
+                    ]
+                };
+            }
+        }
+
+        function onMonthYearChange() {
+            selectedMonth = parseInt(document.getElementById('select-month').value);
+            selectedYear = parseInt(document.getElementById('select-year').value);
+            activeDayIndex = 1;
+            renderAll();
+        }
+
+        function changeMonth(delta) {
+            let m = selectedMonth + delta;
+            let y = selectedYear;
+            if (m < 0) {
+                m = 11;
+                y--;
+            } else if (m > 11) {
+                m = 0;
+                y++;
+            }
+            if (y >= 2025 && y <= 2030) {
+                selectedMonth = m;
+                selectedYear = y;
+                populateSelectors();
+                activeDayIndex = 1;
+                renderAll();
+            }
+        }
+
+        function getActiveKey() {
+            return `${selectedYear}_${selectedMonth}`;
+        }
+
+        function getCurrentSchedule() {
+            const key = getActiveKey();
+            if (!scheduleData[key]) {
+                scheduleData[key] = [];
+                // Initialize default empty calendar days for the selected month
+                const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+                for (let d = 1; d <= daysInMonth; d++) {
+                    scheduleData[key].push({ day: d, shifts: [], note: '' });
+                }
+            }
+            return scheduleData[key];
+        }
+
+        function getCurrentLongTermEvents() {
+            const key = getActiveKey();
+            if (!longTermEvents[key]) {
+                longTermEvents[key] = [];
+            }
+            return longTermEvents[key];
+        }
+
+        function saveAll() {
+            localStorage.setItem('pharmacist_all_schedules', JSON.stringify(scheduleData));
+            localStorage.setItem('pharmacist_long_term_events', JSON.stringify(longTermEvents));
+            localStorage.setItem('pharmacist_custom_colors_v2', JSON.stringify(activeColors));
+        }
+
+        function applyPreset(themeKey) {
+            if (COLOR_PRESETS[themeKey]) {
+                activeColors = { ...COLOR_PRESETS[themeKey] };
+                document.getElementById('color-night').value = activeColors.raw.night;
+                document.getElementById('color-morning').value = activeColors.raw.morning;
+                document.getElementById('color-afternoon').value = activeColors.raw.afternoon;
+                
+                saveAll();
+                renderAll();
+            }
+        }
+
+        function updateShiftColor(shiftKey, hexValue) {
+            activeColors.raw[shiftKey] = hexValue;
+            const lightColor = hexValue + '20'; // 12% Opacity
+            const borderOpacity = hexValue + '40'; // 25% Opacity
+            activeColors[shiftKey] = `background-color: ${lightColor}; color: ${hexValue}; border-color: ${borderOpacity}`;
+            
+            saveAll();
+            renderAll();
+        }
+
+        function getShiftInlineStyle(shiftChar) {
+            if (shiftChar === 'ด') return `background-color: ${activeColors.raw.night}18; color: ${activeColors.raw.night}; border: 1px solid ${activeColors.raw.night}40;`;
+            if (shiftChar === 'ช') return `background-color: ${activeColors.raw.morning}18; color: ${activeColors.raw.morning}; border: 1px solid ${activeColors.raw.morning}40;`;
+            if (shiftChar === 'บ') return `background-color: ${activeColors.raw.afternoon}18; color: ${activeColors.raw.afternoon}; border: 1px solid ${activeColors.raw.afternoon}40;`;
+            return '';
+        }
+
+        function setEventColorChoice(colorHex) {
+            activeEventColorChoice = colorHex;
+            setupEventColors();
+        }
+
+        function setupEventColors() {
+            const colors = ['#ec4899', '#06b6d4', '#10b981', '#f59e0b'];
+            colors.forEach(c => {
+                const idMap = {
+                    '#ec4899': 'color-c-pink',
+                    '#06b6d4': 'color-c-cyan',
+                    '#10b981': 'color-c-green',
+                    '#f59e0b': 'color-c-orange'
+                };
+                const el = document.getElementById(idMap[c]);
+                if (el) {
+                    if (c === activeEventColorChoice) {
+                        el.style.boxShadow = `0 0 0 4px ${c}30`;
+                        el.style.borderColor = '#1e293b';
+                    } else {
+                        el.style.boxShadow = 'none';
+                        el.style.borderColor = 'transparent';
+                    }
+                }
+            });
+        }
+
+        function renderAll() {
+            renderHeaderAndTitles();
+            renderCalendar();
+            renderDropdownDates();
+            renderLongEventsList();
+            renderStats();
+            selectDay(activeDayIndex);
+        }
+
+        function renderHeaderAndTitles() {
+            const mText = THAI_MONTH_NAMES[selectedMonth];
+            const yText = selectedYear + 543;
+            
+            document.getElementById('header-month-badge').innerText = `${ENG_MONTH_NAMES[selectedMonth]} ${selectedYear}`;
+            document.getElementById('board-month-title').innerText = `ตารางปฏิบัติงานและกิจกรรมประจำเดือน ${mText} พ.ศ. ${yText}`;
+            document.getElementById('board-english-month').innerText = ENG_MONTH_NAMES[selectedMonth];
+            document.getElementById('board-english-year').innerText = selectedYear;
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+
+            // Calculate calendar characteristics
+            const firstDayOfWeek = new Date(selectedYear, selectedMonth, 1).getDay(); // 0 = Sun, 1 = Mon ...
+            const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+
+            // 1. Render spacer cells
+            for (let i = 0; i < firstDayOfWeek; i++) {
+                const spacer = document.createElement('div');
+                spacer.className = "bg-slate-100/30 rounded-2xl min-h-[85px] md:min-h-[115px] border border-dashed border-slate-200/40";
+                grid.appendChild(spacer);
+            }
+
+            const currentSched = getCurrentSchedule();
+            const currentEvents = getCurrentLongTermEvents();
+
+            // 2. Render actual calendar days
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dayData = currentSched.find(item => item.day === d) || { day: d, shifts: [], note: '' };
+                const dayOfWeek = (firstDayOfWeek + d - 1) % 7;
+                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                
+                const holidayKey = `${selectedMonth}_${d}`;
+                const holidayName = THAI_HOLIDAYS_2026[holidayKey];
+                const isActive = activeDayIndex === d;
+
+                // Create day cell element
+                const dayCard = document.createElement('div');
+                dayCard.onclick = () => selectDay(d);
+
+                let cardStyleClass = "bg-white border-slate-200/60 hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5";
+                if (isWeekend) cardStyleClass = "bg-yellow-50/30 border-yellow-200/60 hover:shadow-md hover:border-yellow-300 hover:-translate-y-0.5";
+                if (holidayName) cardStyleClass = "bg-rose-50/40 border-rose-100 hover:shadow-md hover:border-rose-200 hover:-translate-y-0.5";
+                if (isActive) cardStyleClass = "bg-indigo-50/20 border-2 border-indigo-600 ring-4 ring-indigo-50 shadow-sm";
+
+                dayCard.className = `calendar-day-card rounded-2xl p-2.5 min-h-[85px] md:min-h-[115px] border cursor-pointer flex flex-col justify-between text-left ${cardStyleClass}`;
+
+                // Header section of individual day card
+                let dateBadgeClass = "text-slate-800 font-semibold";
+                if (isWeekend) dateBadgeClass = "text-amber-700 font-bold";
+                if (holidayName) dateBadgeClass = "text-rose-600 font-black";
+
+                let dayHeaderHtml = `
+                    <div class="flex items-start justify-between w-full">
+                        <span class="text-xs md:text-sm ${dateBadgeClass}">${d}</span>
+                        ${holidayName ? `<span class="w-1.5 h-1.5 bg-rose-500 rounded-full" title="${holidayName}"></span>` : ''}
+                    </div>
+                `;
+
+                // Middle section: shift badges
+                let shiftBadgesHtml = '';
+                if (dayData.shifts.length > 0) {
+                    shiftBadgesHtml = `
+                        <div class="flex flex-wrap gap-1 my-1">
+                            ${dayData.shifts.map(s => {
+                                return `<span style="${getShiftInlineStyle(s)}" class="px-2 py-0.5 text-[9px] md:text-xs font-bold rounded-lg shadow-sm">${s}</span>`;
+                            }).join('')}
+                        </div>
+                    `;
+                } else {
+                    shiftBadgesHtml = `<div class="flex-grow"></div>`;
+                }
+
+                // Multi-day Gantt style ribbons inside cells
+                let ganttHtml = '';
+                const activeLongEvents = currentEvents.filter(e => d >= e.start && d <= e.end);
+                if (activeLongEvents.length > 0) {
+                    ganttHtml = `<div class="flex flex-col gap-0.5 w-full my-1">`;
+                    activeLongEvents.forEach(e => {
+                        const isStart = d === e.start;
+                        const isEnd = d === e.end;
+                        const lCorner = isStart ? 'rounded-l-md' : '';
+                        const rCorner = isEnd ? 'rounded-r-md' : '';
+                        
+                        ganttHtml += `
+                            <div style="background-color: ${e.color}15; color: ${e.color}; border-left: 3px solid ${e.color};" 
+                                 class="px-1.5 py-0.5 text-[8px] md:text-[9px] font-semibold truncate ${lCorner} ${rCorner}"
+                                 title="${e.title}">
+                                ${e.title}
+                            </div>
+                        `;
+                    });
+                    ganttHtml += `</div>`;
+                }
+
+                // Footer section: Notes/Holidays
+                let footerText = '';
+                if (holidayName) {
+                    footerText = `<span class="text-[8px] md:text-[9px] text-rose-500 font-medium truncate block" title="${holidayName}">${holidayName}</span>`;
+                } else if (dayData.note) {
+                    footerText = `<span class="text-[8px] md:text-[9px] text-slate-400 font-normal truncate block flex items-center gap-0.5">
+                        <i data-lucide="info" class="w-2.5 h-2.5 inline text-slate-300"></i> ${dayData.note}
+                    </span>`;
+                } else {
+                    footerText = `<span class="h-3"></span>`;
+                }
+
+                dayCard.innerHTML = `
+                    ${dayHeaderHtml}
+                    ${shiftBadgesHtml}
+                    ${ganttHtml}
+                    ${footerText}
+                `;
+
+                grid.appendChild(dayCard);
+            }
+
+            // Apply legends dynamically
+            document.getElementById('legend-night-color').style.backgroundColor = activeColors.raw.night;
+            document.getElementById('legend-morning-color').style.backgroundColor = activeColors.raw.morning;
+            document.getElementById('legend-afternoon-color').style.backgroundColor = activeColors.raw.afternoon;
+
+            lucide.createIcons();
+        }
+
+        function selectDay(dayNum) {
+            const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+            if (dayNum > daysInMonth) dayNum = 1;
+            
+            activeDayIndex = dayNum;
+
+            // Update UI class triggers in the calendar
+            const cards = document.querySelectorAll('.calendar-day-card');
+            const firstDayOfWeek = new Date(selectedYear, selectedMonth, 1).getDay();
+            cards.forEach((card, idx) => {
+                if (idx === (dayNum + firstDayOfWeek - 1)) {
+                    card.classList.add('bg-indigo-50/20', 'border-2', 'border-indigo-600', 'ring-4', 'ring-indigo-50', 'shadow-sm');
+                } else {
+                    card.classList.remove('border-indigo-600', 'ring-4', 'ring-indigo-50');
+                }
+            });
+
+            const currentSched = getCurrentSchedule();
+            const dayData = currentSched.find(item => item.day === dayNum) || { day: dayNum, shifts: [], note: '' };
+
+            const dayOfWeek = (firstDayOfWeek + dayNum - 1) % 7;
+            const holidayKey = `${selectedMonth}_${dayNum}`;
+            const holidayName = THAI_HOLIDAYS_2026[holidayKey];
+
+            document.getElementById('editor-day-num').innerText = dayNum;
+            document.getElementById('editor-month-label').innerText = THAI_MONTH_NAMES[selectedMonth];
+
+            let labelText = "วันทำงานปกติ";
+            if (dayOfWeek === 0) labelText = "วันอาทิตย์ (วันหยุดประจำสัปดาห์)";
+            if (dayOfWeek === 6) labelText = "วันเสาร์ (วันหยุดประจำสัปดาห์)";
+            if (holidayName) labelText = `${holidayName} (วันหยุดนักขัตฤกษ์)`;
+            document.getElementById('editor-day-type').innerText = labelText;
+
+            // Bind toggle buttons
+            const btnNight = document.getElementById('toggle-shift-night');
+            const btnMorning = document.getElementById('toggle-shift-morning');
+            const btnAfternoon = document.getElementById('toggle-shift-afternoon');
+
+            // Reset designs
+            btnNight.className = "py-2 px-3 border border-slate-200 hover:border-slate-300 rounded-2xl flex flex-col items-center gap-1 transition text-slate-700 bg-white";
+            btnMorning.className = "py-2 px-3 border border-slate-200 hover:border-slate-300 rounded-2xl flex flex-col items-center gap-1 transition text-slate-700 bg-white";
+            btnAfternoon.className = "py-2 px-3 border border-slate-200 hover:border-slate-300 rounded-2xl flex flex-col items-center gap-1 transition text-slate-700 bg-white";
+
+            // Apply selected shift designs
+            if (dayData.shifts.includes('ด')) {
+                btnNight.style = getShiftInlineStyle('ด');
+                btnNight.classList.add('border-2');
+            } else {
+                btnNight.style = '';
+            }
+
+            if (dayData.shifts.includes('ช')) {
+                btnMorning.style = getShiftInlineStyle('ช');
+                btnMorning.classList.add('border-2');
+            } else {
+                btnMorning.style = '';
+            }
+
+            if (dayData.shifts.includes('บ')) {
+                btnAfternoon.style = getShiftInlineStyle('บ');
+                btnAfternoon.classList.add('border-2');
+            } else {
+                btnAfternoon.style = '';
+            }
+
+            document.getElementById('editor-note').value = dayData.note || '';
+        }
+
+        function toggleActiveDayShift(shiftChar) {
+            const currentSched = getCurrentSchedule();
+            let dayData = currentSched.find(item => item.day === activeDayIndex);
+            
+            if (!dayData) {
+                dayData = { day: activeDayIndex, shifts: [], note: '' };
+                currentSched.push(dayData);
+            }
+
+            const idx = dayData.shifts.indexOf(shiftChar);
+            if (idx > -1) {
+                dayData.shifts.splice(idx, 1);
+            } else {
+                dayData.shifts.push(shiftChar);
+                dayData.shifts.sort();
+            }
+
+            saveAll();
+            selectDay(activeDayIndex);
+            renderCalendar();
+            renderStats();
+        }
+
+        function updateActiveDayNote(noteText) {
+            const currentSched = getCurrentSchedule();
+            let dayData = currentSched.find(item => item.day === activeDayIndex);
+            
+            if (!dayData) {
+                dayData = { day: activeDayIndex, shifts: [], note: '' };
+                currentSched.push(dayData);
+            }
+
+            dayData.note = noteText;
+            saveAll();
+            renderStats();
+            renderCalendar();
+        }
+
+        function renderDropdownDates() {
+            const startSelect = document.getElementById('long-event-start');
+            const endSelect = document.getElementById('long-event-end');
+            
+            startSelect.innerHTML = '';
+            endSelect.innerHTML = '';
+
+            const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+            for (let i = 1; i <= daysInMonth; i++) {
+                const opt1 = document.createElement('option');
+                opt1.value = i;
+                opt1.text = `วันที่ ${i}`;
+                startSelect.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = i;
+                opt2.text = `วันที่ ${i}`;
+                endSelect.appendChild(opt2);
+            }
+        }
+
+        function addLongTermEvent() {
+            const titleInput = document.getElementById('long-event-title');
+            const title = titleInput.value.trim();
+            const startVal = parseInt(document.getElementById('long-event-start').value);
+            const endVal = parseInt(document.getElementById('long-event-end').value);
+
+            if (!title) {
+                showModal('กรอกข้อมูลไม่ถูกต้อง', 'กรุณาระบุชื่อกิจกรรมหรือแผนงานสำคัญก่อนดำเนินการครับ', 'info');
+                return;
+            }
+
+            if (startVal > endVal) {
+                showModal('เงื่อนไขไม่ถูกต้อง', 'วันสิ้นสุดต้องมากกว่าหรือเท่ากับวันเริ่มต้นปฏิบัติการครับ', 'info');
+                return;
+            }
+
+            const currentEvents = getCurrentLongTermEvents();
+            const newEvent = {
+                id: Date.now(),
+                title: title,
+                start: startVal,
+                end: endVal,
+                color: activeEventColorChoice
+            };
+
+            currentEvents.push(newEvent);
+            saveAll();
+            
+            // Clean interface fields
+            titleInput.value = '';
+            renderAll();
+            showModal('เพิ่มกิจกรรมแล้ว', `เพิ่มกิจกรรม "${title}" ตั้งแต่วันที่ ${startVal} ถึง ${endVal} ของเดือนสำเร็จแล้ว`, 'calendar-plus');
+        }
+
+        function deleteLongTermEvent(id) {
+            const currentEvents = getCurrentLongTermEvents();
+            const key = getActiveKey();
+            longTermEvents[key] = currentEvents.filter(e => e.id !== id);
+            saveAll();
+            renderAll();
+        }
+
+        function renderLongEventsList() {
+            const listContainer = document.getElementById('long-events-list');
+            listContainer.innerHTML = '';
+
+            const currentEvents = getCurrentLongTermEvents();
+
+            if (currentEvents.length === 0) {
+                listContainer.innerHTML = `<p class="text-[10px] text-slate-400 text-center py-2">ไม่มีกิจกรรมยาวประจำเดือนนี้</p>`;
+                return;
+            }
+
+            currentEvents.forEach(e => {
+                const card = document.createElement('div');
+                card.className = "flex items-center justify-between p-2 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100/70 transition";
+                card.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${e.color}"></span>
+                        <div class="text-left">
+                            <p class="text-xs font-semibold text-slate-700">${e.title}</p>
+                            <p class="text-[9px] text-slate-400">วันที่ ${e.start} - ${e.end}</p>
+                        </div>
+                    </div>
+                    <button onclick="deleteLongTermEvent(${e.id})" class="p-1 text-slate-400 hover:text-red-500 rounded-lg transition" title="ลบกิจกรรม">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                `;
+                listContainer.appendChild(card);
+            });
+
+            lucide.createIcons();
+        }
+
+        function renderStats() {
+            const currentSched = getCurrentSchedule();
+            const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+
+            let totalNight = 0;
+            let totalMorning = 0;
+            let totalAfternoon = 0;
+            let totalWorkedDays = 0;
+
+            currentSched.forEach(day => {
+                if (day.shifts.includes('ด')) totalNight++;
+                if (day.shifts.includes('ช')) totalMorning++;
+                if (day.shifts.includes('บ')) totalAfternoon++;
+                if (day.shifts.length > 0) totalWorkedDays++;
+            });
+
+            const offDays = daysInMonth - totalWorkedDays;
+
+            document.getElementById('stat-night-count').innerText = totalNight;
+            document.getElementById('stat-morning-count').innerText = totalMorning;
+            document.getElementById('stat-afternoon-count').innerText = totalAfternoon;
+
+            document.getElementById('stat-total-shifts').innerText = `${totalNight + totalMorning + totalAfternoon} เวร`;
+            document.getElementById('stat-off-days').innerText = `${offDays} วัน`;
+        }
+
+        function resetToDefault() {
+            selectedYear = 2026;
+            selectedMonth = 6; // July
+            activeDayIndex = 1;
+
+            scheduleData["2026_6"] = JSON.parse(JSON.stringify(defaultSampleJuly2026));
+            longTermEvents["2026_6"] = [
+                { id: 1, title: "สัมมนาวิชาการส่วนบุคคล", start: 10, end: 12, color: "#f59e0b" }
+            ];
+
+            saveAll();
+            populateSelectors();
+            renderAll();
+
+            showModal('เรียบร้อย', 'คืนค่าตารางเวรเริ่มต้นของเดือนกรกฎาคม 2569 เรียบร้อยแล้ว', 'rotate-ccw');
+        }
+
+        // Export complete system data (all months/years/colors) as a single JSON file
+        function exportBackupData() {
+            const backupPayload = {
+                version: "2.1",
+                exportedAt: new Date().toISOString(),
+                scheduleData: scheduleData,
+                longTermEvents: longTermEvents,
+                activeColors: activeColors
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupPayload, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `pharmacist_schedule_backup_${selectedYear}_${selectedMonth + 1}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+
+            showModal('ส่งออกข้อมูลสำเร็จ', 'ดาวน์โหลดไฟล์ .json สำหรับใช้สำรองประวัติเรียบร้อยแล้ว! สามารถอัปโหลดไฟล์นี้ขึ้น GitHub เพื่อจัดเก็บประวัติถาวรได้ครับ', 'download');
+        }
+
+        function triggerImportInput() {
+            document.getElementById('import-file-input').click();
+        }
+
+        function importBackupData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsedData = JSON.parse(e.target.result);
+                    
+                    // Validate data structure
+                    if (parsedData.scheduleData && parsedData.longTermEvents) {
+                        scheduleData = parsedData.scheduleData;
+                        longTermEvents = parsedData.longTermEvents;
+                        if (parsedData.activeColors) activeColors = parsedData.activeColors;
+
+                        saveAll();
+                        renderAll();
+                        
+                        showModal('นำเข้าสำเร็จ!', 'ประวัติข้อมูลตารางเวร สถิติย้อนหลัง และกิจกรรมทั้งหมดถูกซิงก์เรียบร้อยแล้วครับ', 'check');
+                    } else {
+                        showModal('ข้อมูลไม่ถูกต้อง', 'รูปแบบไฟล์ไม่ถูกต้อง ไม่พบโครงสร้างข้อมูลตารางเวรที่ระบุครับ');
+                    }
+                } catch (err) {
+                    showModal('ข้อผิดพลาด', 'ไม่สามารถอ่านไฟล์ได้ กรุณาตรวจสอบว่าเป็นไฟล์นามสกุล .json ที่ถูกต้อง');
+                }
+            };
+            reader.readAsText(file);
+            // Reset input so change event fires again if uploading same file
+            event.target.value = '';
+        }
+
+        function exportToImage() {
+            const calendarNode = document.getElementById('calendar-export-area');
+
+            // Temporarily hide current highlight block for a cleaner rendering
+            const savedActiveDayIndex = activeDayIndex;
+            activeDayIndex = null;
+            renderCalendar();
+
+            html2canvas(calendarNode, {
+                scale: 2,
+                backgroundColor: "#ffffff",
+                useCORS: true,
+                logging: false,
+                borderRadius: "24px"
+            }).then(canvas => {
+                activeDayIndex = savedActiveDayIndex;
+                renderCalendar();
+
+                const link = document.createElement('a');
+                const label = THAI_MONTH_NAMES[selectedMonth];
+                link.download = `ตารางเวร_ภญ_ตรียาพร_${label}_${selectedYear+543}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                showModal('บันทึกรูปภาพสำเร็จ', 'ดาวน์โหลดตารางเวรคุณภาพสูงสำเร็จแล้ว สามารถนำแชร์เข้ากลุ่มเวรได้ทันทีครับ', 'image');
+            }).catch(err => {
+                activeDayIndex = savedActiveDayIndex;
+                renderCalendar();
+                showModal('ข้อผิดพลาด', 'ไม่สามารถจำลองภาพได้เนื่องจากขีดจำกัดของเบราว์เซอร์ ลองใหม่อีกครั้ง');
+            });
+        }
+
+        function exportToGCal() {
+            let icsContent = "BEGIN:VCALENDAR\r\n" +
+                             "VERSION:2.0\r\n" +
+                             "PRODID:-//Minimalist Schedule System Custom//TH\r\n" +
+                             "CALSCALE:GREGORIAN\r\n" +
+                             "METHOD:PUBLISH\r\n";
+
+            let eventCount = 0;
+            const currentSched = getCurrentSchedule();
+            const currentEvents = getCurrentLongTermEvents();
+
+            // 1. Export standard daily duties
+            currentSched.forEach(day => {
+                if (day.shifts.length === 0) return;
+
+                const dayStr = String(day.day).padStart(2, '0');
+                const monthStr = String(selectedMonth + 1).padStart(2, '0');
+                const dateStamp = `${selectedYear}${monthStr}${dayStr}`;
+
+                day.shifts.forEach(shift => {
+                    let summary = '';
+                    let startTime = '';
+                    let endTime = '';
+
+                    if (shift === 'ด') {
+                        summary = 'เวรดึก (ด) - ภญ.ตรียาพร ไชยกาล';
+                        startTime = '000000';
+                        endTime = '080000';
+                    } else if (shift === 'ช') {
+                        summary = 'เวรเช้า (ช) - ภญ.ตรียาพร ไชยกาล';
+                        startTime = '080000';
+                        endTime = '160000';
+                    } else if (shift === 'บ') {
+                        summary = 'เวรบ่าย (บ) - ภญ.ตรียาพร ไชยกาล';
+                        startTime = '160000';
+                        endTime = '240000';
+                    }
+
+                    const description = day.note ? `หมายเหตุ: ${day.note}` : 'ปฏิบัติงานตารางเวรเภสัชกร';
+
+                    icsContent += "BEGIN:VEVENT\r\n" +
+                                  `UID:${Date.now()}-${day.day}-${shift}@duty-schedule.local\r\n` +
+                                  `DTSTAMP:${dateStamp}T000000Z\r\n` +
+                                  `DTSTART;TZID=Asia/Bangkok:${dateStamp}T${startTime}\r\n` +
+                                  `DTEND;TZID=Asia/Bangkok:${dateStamp}T${endTime}\r\n` +
+                                  `SUMMARY:${summary}\r\n` +
+                                  `DESCRIPTION:${description}\r\n` +
+                                  "LOCATION:กลุ่มงานเภสัชกรรม โรงพยาบาลวัฒนานคร\r\n" +
+                                  "END:VEVENT\r\n";
+                    eventCount++;
+                });
+            });
+
+            // 2. Export multi-day events as full-day events
+            currentEvents.forEach(e => {
+                const startStr = String(e.start).padStart(2, '0');
+                // Google Calendar full-day events end date is exclusive, so add 1 to end date
+                const endStr = String(e.end + 1).padStart(2, '0');
+                const monthStr = String(selectedMonth + 1).padStart(2, '0');
+                
+                const dateStartStamp = `${selectedYear}${monthStr}${startStr}`;
+                const dateEndStamp = `${selectedYear}${monthStr}${endStr}`;
+
+                icsContent += "BEGIN:VEVENT\r\n" +
+                              `UID:${Date.now()}-${e.id}@long-event.local\r\n` +
+                              `DTSTAMP:${dateStartStamp}T000000Z\r\n` +
+                              `DTSTART;VALUE=DATE:${dateStartStamp}\r\n` +
+                              `DTEND;VALUE=DATE:${dateEndStamp}\r\n` +
+                              `SUMMARY:[กิจกรรม] ${e.title}\r\n` +
+                              `DESCRIPTION:กิจกรรมภารกิจระยะยาว ของภญ.ตรียาพร ไชยกาล\r\n` +
+                              `LOCATION:โรงพยาบาลวัฒนานคร\r\n` +
+                              `END:VEVENT\r\n`;
+                eventCount++;
+            });
+
+            icsContent += "END:VCALENDAR";
+
+            if (eventCount === 0) {
+                showModal('ไม่มีกิจกรรม', 'ไม่พบภารกิจหรือเวรปฏิบัติงานประจำเดือนนี้ จึงไม่มีรายการส่งออกปฏิทินครับ', 'info');
+                return;
+            }
+
+            const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            const label = THAI_MONTH_NAMES[selectedMonth];
+            link.download = `แผนงานเวร_ภญ_ตรียาพร_${label}_${selectedYear}.ics`;
+            link.click();
+
+            showModal('สร้างไฟล์นำเข้าสำเร็จ!', 
+                      `ระบบดาวน์โหลดไฟล์ "${link.download}" ให้คุณแล้ว!<br><br>` +
+                      `<b>วิธีนำเข้าสู่ Google Calendar:</b><br>` +
+                      `1. เปิดเว็บปฏิทินผ่าน <b>calendar.google.com</b><br>` +
+                      `2. ไปที่เครื่องหมายเฟือง ⚙️ (การตั้งค่า) -> เลือก <b>"นำเข้าและส่งออก" (Import & Export)</b><br>` +
+                      `3. อัปโหลดไฟล์ .ics นี้เข้าไปยังปฏิทินที่ต้องการ ข้อมูลจะเชื่อมโยงไปแสดงผลบนมือถือทันที!`, 
+                      'calendar-plus');
+        }
+
+        function showModal(title, msg, iconKey = 'info') {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-message').innerHTML = msg;
+            
+            const iconContainer = document.getElementById('modal-icon-container');
+            iconContainer.innerHTML = `<i data-lucide="${iconKey}" class="w-6 h-6"></i>`;
+            
+            const modal = document.getElementById('custom-modal');
+            modal.classList.remove('hidden');
+            
+            lucide.createIcons();
+        }
+
+        function closeModal() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        }
+
+        function openGuide() {
+            document.getElementById('guide-modal').classList.remove('hidden');
+        }
+
+        function closeGuide() {
+            document.getElementById('guide-modal').classList.add('hidden');
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
