@@ -114,14 +114,10 @@
         <!-- Left Column: Settings, Active Day, and Long Term Event Creator (lg:col-span-4) -->
         <div class="lg:col-span-4 flex flex-col gap-6">
             
-            <!-- Person Card (Cleaned without "Pharmacist 5" reference) -->
+            <!-- Person Card -->
             <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
-                <!-- ส่วนแสดงรูปภาพโปรไฟล์ (คุณสามารถเปลี่ยนชื่อไฟล์รูปภาพของคุณตรงนี้ได้เลย) -->
                 <div class="w-14 h-14 rounded-2xl overflow-hidden shadow-md shadow-indigo-100 flex items-center justify-center bg-gradient-to-tr from-indigo-500 to-purple-600 relative border border-slate-100">
-                    <!-- หากต้องการเปลี่ยนรูปภาพ ให้แก้ไขชื่อไฟล์ที่ src="profile.jpg" เป็นชื่อรูปของคุณ (เช่น profile.png หรือ ลิงก์รูปภาพออนไลน์) -->
                     <img id="profile-avatar" src="profile.jpg" alt="ภญ.ตรียาพร" class="w-full h-full object-cover" onerror="this.style.opacity='0'; document.getElementById('profile-avatar-fallback').style.opacity='1';">
-                    
-                    <!-- ส่วนแสดงไอคอนสำรอง (จะแสดงผลอัตโนมัติถ้ารูปภาพหลักโหลดไม่ได้) -->
                     <div id="profile-avatar-fallback" class="absolute inset-0 flex items-center justify-center text-white opacity-0 transition-opacity duration-200 pointer-events-none">
                         <i data-lucide="user" class="w-6 h-6"></i>
                     </div>
@@ -298,7 +294,13 @@
                         การจัดการและสำรองข้อมูล (แชร์ 2 คน)
                     </h3>
                 </div>
-                <p class="text-[10px] text-slate-400 -mt-2 leading-relaxed">
+                
+                <!-- Storage Health Status Indicator -->
+                <div id="storage-status-pill" class="flex items-center gap-2 p-2 rounded-xl text-[10px] font-semibold border">
+                    <!-- Loaded dynamically via JavaScript -->
+                </div>
+
+                <p class="text-[10px] text-slate-400 -mt-1 leading-relaxed">
                     เนื่องจากข้อมูลเก็บในเบราว์เซอร์ เพื่อให้สถิติย้อนหลังตรงกัน ใช้วิธีดาวน์โหลดไฟล์ไปอัปเดตลงในโฟลเดอร์ของ GitHub หรือส่งต่อให้เพื่อนนำเข้าได้ครับ
                 </p>
                 <div class="grid grid-cols-2 gap-2">
@@ -311,7 +313,6 @@
                         นำเข้าข้อมูล
                     </button>
                 </div>
-                <!-- Hidden file input for import -->
                 <input type="file" id="import-file-input" onchange="importBackupData(event)" class="hidden" accept=".json">
             </div>
 
@@ -402,7 +403,7 @@
         </div>
     </div>
 
-    <!-- Smart Guide & Help Modal (Replaces previous reference sheet info) -->
+    <!-- Smart Guide & Help Modal -->
     <div id="guide-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-xl border border-slate-100 flex flex-col gap-4">
             <div class="flex items-center justify-between">
@@ -427,6 +428,46 @@
     </div>
 
     <script>
+        // --- SECURE HYBRID STORAGE MANAGER ---
+        const StorageManager = {
+            memoryStore: {},
+            isSupported: function() {
+                try {
+                    const testKey = '__storage_test__';
+                    localStorage.setItem(testKey, '1');
+                    localStorage.removeItem(testKey);
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            },
+            get: function(key) {
+                if (this.isSupported()) {
+                    try {
+                        return localStorage.getItem(key);
+                    } catch (e) {
+                        return this.memoryStore[key] || null;
+                    }
+                } else {
+                    return this.memoryStore[key] || null;
+                }
+            },
+            set: function(key, value) {
+                if (this.isSupported()) {
+                    try {
+                        localStorage.setItem(key, value);
+                        return true;
+                    } catch (e) {
+                        this.memoryStore[key] = value;
+                        return false;
+                    }
+                } else {
+                    this.memoryStore[key] = value;
+                    return false;
+                }
+            }
+        };
+
         // Calendar Configuration states
         let selectedYear = 2026;
         let selectedMonth = 6; // July (0-indexed, so 6 is July)
@@ -464,7 +505,7 @@
             hospital: { night: "#E0F2FE text-[#0369A1] border-sky-200", morning: "#ECFDF5 text-[#047857] border-emerald-200", afternoon: "#F0FDFA text-[#0F766E] border-teal-200", raw: { night: "#0ea5e9", morning: "#10b981", afternoon: "#14b8a6" } }
         };
 
-        // Static Sample Data representing an initialized schedule state
+        // Static Sample Data representing an initialized schedule state from S__61669392.jpg
         const defaultSampleJuly2026 = [
             { day: 1, shifts: ['บ'], note: '' },
             { day: 2, shifts: [], note: '' },
@@ -502,6 +543,7 @@
         function init() {
             populateSelectors();
             loadState();
+            updateStoragePill();
             setupEventColors();
             renderAll();
         }
@@ -531,16 +573,27 @@
             }
         }
 
+        function updateStoragePill() {
+            const pill = document.getElementById('storage-status-pill');
+            if (StorageManager.isSupported()) {
+                pill.className = "flex items-center gap-2 p-2 rounded-xl text-[10px] font-semibold border bg-emerald-50 text-emerald-700 border-emerald-100";
+                pill.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> ระบบเซฟข้อมูลอัตโนมัติบนอุปกรณ์นี้สำเร็จ`;
+            } else {
+                pill.className = "flex items-center gap-2 p-2 rounded-xl text-[10px] font-semibold border bg-amber-50 text-amber-700 border-amber-100";
+                pill.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span> เซสชันชั่วคราว (กรุณากด 'สำรองข้อมูล' เพื่อเก็บประวัติ)`;
+            }
+        }
+
         function loadState() {
-            // Load custom colors
-            const savedColors = localStorage.getItem('pharmacist_custom_colors_v2');
-            if (savedColors) {
-                try {
+            // Load custom colors securely
+            try {
+                const savedColors = StorageManager.get('pharmacist_custom_colors_v2');
+                if (savedColors) {
                     activeColors = JSON.parse(savedColors);
-                } catch (e) {
+                } else {
                     activeColors = JSON.parse(JSON.stringify(COLOR_PRESETS.pastel));
                 }
-            } else {
+            } catch (e) {
                 activeColors = JSON.parse(JSON.stringify(COLOR_PRESETS.pastel));
             }
 
@@ -550,30 +603,46 @@
             }
 
             // Sync color input forms
-            document.getElementById('color-night').value = activeColors.raw.night;
-            document.getElementById('color-morning').value = activeColors.raw.morning;
-            document.getElementById('color-afternoon').value = activeColors.raw.afternoon;
+            const colorNight = document.getElementById('color-night');
+            const colorMorning = document.getElementById('color-morning');
+            const colorAfternoon = document.getElementById('color-afternoon');
+            if (colorNight) colorNight.value = activeColors.raw.night;
+            if (colorMorning) colorMorning.value = activeColors.raw.morning;
+            if (colorAfternoon) colorAfternoon.value = activeColors.raw.afternoon;
 
-            // Load schedule data
-            const savedSchedule = localStorage.getItem('pharmacist_all_schedules');
-            if (savedSchedule) {
-                scheduleData = JSON.parse(savedSchedule);
-            } else {
-                scheduleData = {
-                    "2026_6": JSON.parse(JSON.stringify(defaultSampleJuly2026))
-                };
+            // Load schedule data securely
+            try {
+                const savedSchedule = StorageManager.get('pharmacist_all_schedules');
+                if (savedSchedule) {
+                    scheduleData = JSON.parse(savedSchedule);
+                } else {
+                    scheduleData = {};
+                }
+            } catch (e) {
+                scheduleData = {};
             }
 
-            // Load multi-day events
-            const savedEvents = localStorage.getItem('pharmacist_long_term_events');
-            if (savedEvents) {
-                longTermEvents = JSON.parse(savedEvents);
-            } else {
-                longTermEvents = {
-                    "2026_6": [
-                        { id: 1, title: "สัมมนาวิชาการส่วนบุคคล", start: 10, end: 12, color: "#f59e0b" }
-                    ]
-                };
+            // Ensure our default key always has the mock data if not set yet
+            if (!scheduleData["2026_6"] || scheduleData["2026_6"].length === 0) {
+                scheduleData["2026_6"] = JSON.parse(JSON.stringify(defaultSampleJuly2026));
+            }
+
+            // Load multi-day events securely
+            try {
+                const savedEvents = StorageManager.get('pharmacist_long_term_events');
+                if (savedEvents) {
+                    longTermEvents = JSON.parse(savedEvents);
+                } else {
+                    longTermEvents = {};
+                }
+            } catch (e) {
+                longTermEvents = {};
+            }
+
+            if (!longTermEvents["2026_6"]) {
+                longTermEvents["2026_6"] = [
+                    { id: 1, title: "สัมมนาวิชาการส่วนบุคคล", start: 10, end: 12, color: "#f59e0b" }
+                ];
             }
         }
 
@@ -609,7 +678,7 @@
 
         function getCurrentSchedule() {
             const key = getActiveKey();
-            if (!scheduleData[key]) {
+            if (!scheduleData[key] || scheduleData[key].length === 0) {
                 scheduleData[key] = [];
                 // Initialize default empty calendar days for the selected month
                 const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
@@ -629,14 +698,15 @@
         }
 
         function saveAll() {
-            localStorage.setItem('pharmacist_all_schedules', JSON.stringify(scheduleData));
-            localStorage.setItem('pharmacist_long_term_events', JSON.stringify(longTermEvents));
-            localStorage.setItem('pharmacist_custom_colors_v2', JSON.stringify(activeColors));
+            StorageManager.set('pharmacist_all_schedules', JSON.stringify(scheduleData));
+            StorageManager.set('pharmacist_long_term_events', JSON.stringify(longTermEvents));
+            StorageManager.set('pharmacist_custom_colors_v2', JSON.stringify(activeColors));
+            updateStoragePill();
         }
 
         function applyPreset(themeKey) {
             if (COLOR_PRESETS[themeKey]) {
-                activeColors = { ...COLOR_PRESETS[themeKey] };
+                activeColors = JSON.parse(JSON.stringify(COLOR_PRESETS[themeKey]));
                 document.getElementById('color-night').value = activeColors.raw.night;
                 document.getElementById('color-morning').value = activeColors.raw.morning;
                 document.getElementById('color-afternoon').value = activeColors.raw.afternoon;
@@ -762,7 +832,7 @@
 
                 // Middle section: shift badges
                 let shiftBadgesHtml = '';
-                if (dayData.shifts.length > 0) {
+                if (dayData.shifts && dayData.shifts.length > 0) {
                     shiftBadgesHtml = `
                         <div class="flex flex-wrap gap-1 my-1">
                             ${dayData.shifts.map(s => {
@@ -837,9 +907,19 @@
             const firstDayOfWeek = new Date(selectedYear, selectedMonth, 1).getDay();
             cards.forEach((card, idx) => {
                 if (idx === (dayNum + firstDayOfWeek - 1)) {
-                    card.classList.add('bg-indigo-50/20', 'border-2', 'border-indigo-600', 'ring-4', 'ring-indigo-50', 'shadow-sm');
+                    card.className = "calendar-day-card rounded-2xl p-2.5 min-h-[85px] md:min-h-[115px] border cursor-pointer flex flex-col justify-between text-left bg-indigo-50/20 border-2 border-indigo-600 ring-4 ring-indigo-50 shadow-sm";
                 } else {
-                    card.classList.remove('border-indigo-600', 'ring-4', 'ring-indigo-50');
+                    const dNum = idx - firstDayOfWeek + 1;
+                    const dOfWeek = idx % 7;
+                    const isW = (dOfWeek === 0 || dOfWeek === 6);
+                    const holidayKey = `${selectedMonth}_${dNum}`;
+                    const holidayName = THAI_HOLIDAYS_2026[holidayKey];
+                    
+                    let cardClass = "bg-white border-slate-200/60 hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5";
+                    if (isW) cardClass = "bg-yellow-50/30 border-yellow-200/60 hover:shadow-md hover:border-yellow-300 hover:-translate-y-0.5";
+                    if (holidayName) cardClass = "bg-rose-50/40 border-rose-100 hover:shadow-md hover:border-rose-200 hover:-translate-y-0.5";
+                    
+                    card.className = `calendar-day-card rounded-2xl p-2.5 min-h-[85px] md:min-h-[115px] border cursor-pointer flex flex-col justify-between text-left ${cardClass}`;
                 }
             });
 
@@ -865,26 +945,26 @@
             const btnAfternoon = document.getElementById('toggle-shift-afternoon');
 
             // Reset designs
-            btnNight.className = "py-2 px-3 border border-slate-200 hover:border-slate-300 rounded-2xl flex flex-col items-center gap-1 transition text-slate-700 bg-white";
-            btnMorning.className = "py-2 px-3 border border-slate-200 hover:border-slate-300 rounded-2xl flex flex-col items-center gap-1 transition text-slate-700 bg-white";
-            btnAfternoon.className = "py-2 px-3 border border-slate-200 hover:border-slate-300 rounded-2xl flex flex-col items-center gap-1 transition text-slate-700 bg-white";
+            btnNight.className = "py-2.5 px-3 border border-slate-200 hover:border-slate-300 rounded-xl flex flex-col items-center gap-1 transition text-slate-700 bg-white";
+            btnMorning.className = "py-2.5 px-3 border border-slate-200 hover:border-slate-300 rounded-xl flex flex-col items-center gap-1 transition text-slate-700 bg-white";
+            btnAfternoon.className = "py-2.5 px-3 border border-slate-200 hover:border-slate-300 rounded-xl flex flex-col items-center gap-1 transition text-slate-700 bg-white";
 
             // Apply selected shift designs
-            if (dayData.shifts.includes('ด')) {
+            if (dayData.shifts && dayData.shifts.includes('ด')) {
                 btnNight.style = getShiftInlineStyle('ด');
                 btnNight.classList.add('border-2');
             } else {
                 btnNight.style = '';
             }
 
-            if (dayData.shifts.includes('ช')) {
+            if (dayData.shifts && dayData.shifts.includes('ช')) {
                 btnMorning.style = getShiftInlineStyle('ช');
                 btnMorning.classList.add('border-2');
             } else {
                 btnMorning.style = '';
             }
 
-            if (dayData.shifts.includes('บ')) {
+            if (dayData.shifts && dayData.shifts.includes('บ')) {
                 btnAfternoon.style = getShiftInlineStyle('บ');
                 btnAfternoon.classList.add('border-2');
             } else {
@@ -901,6 +981,10 @@
             if (!dayData) {
                 dayData = { day: activeDayIndex, shifts: [], note: '' };
                 currentSched.push(dayData);
+            }
+
+            if (!dayData.shifts) {
+                dayData.shifts = [];
             }
 
             const idx = dayData.shifts.indexOf(shiftChar);
@@ -929,7 +1013,28 @@
             dayData.note = noteText;
             saveAll();
             renderStats();
-            renderCalendar();
+            
+            // Re-render only note-relevant elements quietly to avoid total screen flashing
+            const firstDayOfWeek = new Date(selectedYear, selectedMonth, 1).getDay();
+            const cards = document.querySelectorAll('.calendar-day-card');
+            const targetIndex = activeDayIndex + firstDayOfWeek - 1;
+            if (cards[targetIndex]) {
+                const holidayKey = `${selectedMonth}_${activeDayIndex}`;
+                const holidayName = THAI_HOLIDAYS_2026[holidayKey];
+                const footerSpan = cards[targetIndex].querySelector('span:last-child');
+                if (footerSpan) {
+                    if (holidayName) {
+                        footerSpan.outerHTML = `<span class="text-[8px] md:text-[9px] text-rose-500 font-medium truncate block" title="${holidayName}">${holidayName}</span>`;
+                    } else if (noteText) {
+                        footerSpan.outerHTML = `<span class="text-[8px] md:text-[9px] text-slate-400 font-normal truncate block flex items-center gap-0.5">
+                            <i data-lucide="info" class="w-2.5 h-2.5 inline text-slate-300"></i> ${noteText}
+                        </span>`;
+                    } else {
+                        footerSpan.outerHTML = `<span class="h-3"></span>`;
+                    }
+                    lucide.createIcons();
+                }
+            }
         }
 
         function renderDropdownDates() {
@@ -981,7 +1086,6 @@
             currentEvents.push(newEvent);
             saveAll();
             
-            // Clean interface fields
             titleInput.value = '';
             renderAll();
             showModal('เพิ่มกิจกรรมแล้ว', `เพิ่มกิจกรรม "${title}" ตั้งแต่วันที่ ${startVal} ถึง ${endVal} ของเดือนสำเร็จแล้ว`, 'calendar-plus');
@@ -1037,10 +1141,12 @@
             let totalWorkedDays = 0;
 
             currentSched.forEach(day => {
-                if (day.shifts.includes('ด')) totalNight++;
-                if (day.shifts.includes('ช')) totalMorning++;
-                if (day.shifts.includes('บ')) totalAfternoon++;
-                if (day.shifts.length > 0) totalWorkedDays++;
+                if (day.shifts) {
+                    if (day.shifts.includes('ด')) totalNight++;
+                    if (day.shifts.includes('ช')) totalMorning++;
+                    if (day.shifts.includes('บ')) totalAfternoon++;
+                    if (day.shifts.length > 0) totalWorkedDays++;
+                }
             });
 
             const offDays = daysInMonth - totalWorkedDays;
@@ -1070,10 +1176,9 @@
             showModal('เรียบร้อย', 'คืนค่าตารางเวรเริ่มต้นของเดือนกรกฎาคม 2569 เรียบร้อยแล้ว', 'rotate-ccw');
         }
 
-        // Export complete system data (all months/years/colors) as a single JSON file
         function exportBackupData() {
             const backupPayload = {
-                version: "2.1",
+                version: "2.2",
                 exportedAt: new Date().toISOString(),
                 scheduleData: scheduleData,
                 longTermEvents: longTermEvents,
@@ -1104,7 +1209,6 @@
                 try {
                     const parsedData = JSON.parse(e.target.result);
                     
-                    // Validate data structure
                     if (parsedData.scheduleData && parsedData.longTermEvents) {
                         scheduleData = parsedData.scheduleData;
                         longTermEvents = parsedData.longTermEvents;
@@ -1122,14 +1226,13 @@
                 }
             };
             reader.readAsText(file);
-            // Reset input so change event fires again if uploading same file
             event.target.value = '';
         }
 
         function exportToImage() {
             const calendarNode = document.getElementById('calendar-export-area');
 
-            // Temporarily hide current highlight block for a cleaner rendering
+            // Temporarily hide highlight state for clean printing
             const savedActiveDayIndex = activeDayIndex;
             activeDayIndex = null;
             renderCalendar();
@@ -1171,7 +1274,7 @@
 
             // 1. Export standard daily duties
             currentSched.forEach(day => {
-                if (day.shifts.length === 0) return;
+                if (!day.shifts || day.shifts.length === 0) return;
 
                 const dayStr = String(day.day).padStart(2, '0');
                 const monthStr = String(selectedMonth + 1).padStart(2, '0');
@@ -1214,7 +1317,6 @@
             // 2. Export multi-day events as full-day events
             currentEvents.forEach(e => {
                 const startStr = String(e.start).padStart(2, '0');
-                // Google Calendar full-day events end date is exclusive, so add 1 to end date
                 const endStr = String(e.end + 1).padStart(2, '0');
                 const monthStr = String(selectedMonth + 1).padStart(2, '0');
                 
@@ -1281,6 +1383,7 @@
             document.getElementById('guide-modal').classList.add('hidden');
         }
 
+        // Run application on window load
         window.onload = init;
     </script>
 </body>
